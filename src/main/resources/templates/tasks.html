@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Tasks | Todo App</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="dashboard">
+    <header class="dashboard-header">
+        <div>
+            <h1>Todo Dashboard</h1>
+            <p class="subtitle">User: <strong th:text="${username}"></strong></p>
+        </div>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn secondary">Logout</button>
+        </form>
+    </header>
+
+    <section class="card">
+        <h2>Create New Task</h2>
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert error" th:each="error : ${#fields.globalErrors()}"
+             th:text="${error}"></div>
+
+        <form th:action="@{/tasks}" th:object="${taskForm}" method="post" class="form-grid">
+            <label for="title">Task Title</label>
+            <input id="title" type="text" th:field="*{title}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+
+            <label for="description">Description</label>
+            <textarea id="description" th:field="*{description}" rows="3"></textarea>
+            <p class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></p>
+
+            <div class="date-grid">
+                <div>
+                    <label for="taskDate">Task Date</label>
+                    <input id="taskDate" type="date" th:field="*{taskDate}" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('taskDate')}" th:errors="*{taskDate}"></p>
+                </div>
+                <div>
+                    <label for="plannedFinishDate">Planned Finish Date</label>
+                    <input id="plannedFinishDate" type="date" th:field="*{plannedFinishDate}" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDate')}"
+                       th:errors="*{plannedFinishDate}"></p>
+                </div>
+            </div>
+
+            <label for="priority">Priority</label>
+            <select id="priority" th:field="*{priority}" required>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+            </select>
+            <p class="field-error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></p>
+
+            <button type="submit" class="btn">Add Task</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>My Task List</h2>
+
+        <div th:if="${#lists.isEmpty(tasks)}" class="empty-state">
+            No tasks yet. Add your first task above.
+        </div>
+
+        <div class="task-list" th:if="${!#lists.isEmpty(tasks)}">
+            <article class="task-item" th:each="task : ${tasks}">
+                <div class="task-main">
+                    <h3 th:text="${task.title}"></h3>
+                    <p class="task-description" th:text="${task.description}"></p>
+                    <p class="task-dates">
+                        Task Date: <strong th:text="${task.taskDate}"></strong>
+                        | Planned Finish: <strong th:text="${task.plannedFinishDate}"></strong>
+                        | Priority: <strong th:text="${task.priority}"></strong>
+                    </p>
+                    <p class="status" th:classappend="${task.status.name() == 'COMPLETED'} ? 'completed' : 'open'"
+                       th:text="${task.status}"></p>
+                </div>
+
+                <a th:if="${task.status.name() == 'OPEN'}" th:href="@{|/tasks/${task.id}/edit|}" class="btn secondary">Edit</a>
+                <form th:if="${task.status.name() == 'OPEN'}" th:action="@{|/tasks/${task.id}/complete|}" method="post">
+                    <button type="submit" class="btn success">Mark Completed</button>
+                </form>
+            </article>
+        </div>
+    </section>
+
+    <section class="card" th:if="${editingTaskId != null}" th:object="${editTaskForm}">
+        <h2>Edit Task</h2>
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert error" th:each="error : ${#fields.globalErrors()}"
+             th:text="${error}"></div>
+
+        <form th:action="@{|/tasks/${editingTaskId}/edit|}" method="post" class="form-grid">
+            <label for="edit-title">Task Title</label>
+            <input id="edit-title" type="text" th:field="*{title}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+
+            <label for="edit-description">Description</label>
+            <textarea id="edit-description" th:field="*{description}" rows="3"></textarea>
+            <p class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></p>
+
+            <div class="date-grid">
+                <div>
+                    <label for="edit-taskDate">Task Date</label>
+                    <input id="edit-taskDate" type="date" th:field="*{taskDate}" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('taskDate')}" th:errors="*{taskDate}"></p>
+                </div>
+                <div>
+                    <label for="edit-plannedFinishDate">Planned Finish Date</label>
+                    <input id="edit-plannedFinishDate" type="date" th:field="*{plannedFinishDate}" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDate')}"
+                       th:errors="*{plannedFinishDate}"></p>
+                </div>
+            </div>
+
+            <label for="edit-priority">Priority</label>
+            <select id="edit-priority" th:field="*{priority}" required>
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+            </select>
+            <p class="field-error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></p>
+
+            <button type="submit" class="btn">Save Changes</button>
+            <a th:href="@{/tasks}" class="btn secondary">Cancel</a>
+        </form>
+    </section>
+</div>
+</body>
+</html>

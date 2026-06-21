@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register | Todo App</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="auth-container">
+    <div class="card auth-card">
+        <h1>Create Account</h1>
+        <p class="subtitle">Each user gets a private task timeline.</p>
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert error" th:each="error : ${#fields.globalErrors()}"
+             th:text="${error}"></div>
+
+        <form th:action="@{/register}" th:object="${registrationForm}" method="post" class="form-grid">
+            <label for="username">Username</label>
+            <input id="username" type="text" th:field="*{username}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></p>
+
+            <label for="fullName">Full Name</label>
+            <input id="fullName" type="text" th:field="*{fullName}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></p>
+
+            <label for="password">Password</label>
+            <input id="password" type="password" th:field="*{password}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
+
+            <label for="confirmPassword">Confirm Password</label>
+            <input id="confirmPassword" type="password" th:field="*{confirmPassword}" required>
+            <p class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></p>
+
+            <button type="submit" class="btn">Register</button>
+        </form>
+
+        <p class="footer-link">Already have an account? <a th:href="@{/login}">Sign in</a></p>
+    </div>
+</div>
+</body>
+</html>

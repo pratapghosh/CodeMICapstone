@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: todo-app
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080
+
+app:
+  storage:
+    root-path: storage

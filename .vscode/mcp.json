@@ -1,0 +1,21 @@
+{
+  
+  "servers": {
+    "jira-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "jira-mcp"
+      ],
+      "envFile": "${workspaceFolder}/.secrets/mcp/.env"
+    },
+    "gitlab-epam": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-gitlab"
+      ],
+      "envFile": "${workspaceFolder}/.secrets/mcp/.env"
+    }
+  }
+}

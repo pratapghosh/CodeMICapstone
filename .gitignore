@@ -1,0 +1,18 @@
+# Local secrets
+.secrets/**
+!.secrets/
+!.secrets/mcp/
+!.secrets/mcp/.env.example
+
+# Build artifacts
+target/
+
+# Runtime storage for local file persistence
+storage/
+
+# IDE and OS files
+.idea/
+*.iml
+Thumbs.db
+
+generated_docs/*
