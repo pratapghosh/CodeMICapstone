@@ -4,16 +4,21 @@ import com.capstone.todo.domain.Priority;
 import com.capstone.todo.domain.TaskStatus;
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.dto.TaskForm;
+import com.capstone.todo.service.TaskCsvExportService;
 import com.capstone.todo.service.TaskService;
 import org.mockito.Mockito;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,16 +29,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 public class TaskControllerTest {
 
     private TaskService taskService;
+    private TaskCsvExportService taskCsvExportService;
     private TaskController taskController;
 
     @BeforeMethod
     public void setUp() {
         taskService = Mockito.mock(TaskService.class);
-        taskController = new TaskController(taskService);
+        taskCsvExportService = Mockito.mock(TaskCsvExportService.class);
+        taskController = new TaskController(taskService, taskCsvExportService);
     }
 
     @Test
@@ -57,6 +65,50 @@ public class TaskControllerTest {
         assertNotNull(model.getAttribute("taskForm"));
         assertNotNull(model.getAttribute("editTaskForm"));
         assertEquals(model.getAttribute("username"), "john");
+    }
+
+    @Test
+    public void exportTasksShouldReturnCsvAttachmentForAuthenticatedUserTasks() {
+        org.springframework.security.core.Authentication authentication = Mockito.mock(org.springframework.security.core.Authentication.class);
+        when(authentication.getName()).thenReturn("john");
+        TodoTask task = new TodoTask(
+            "task-1",
+            "john",
+            "Title",
+            "Desc",
+            LocalDate.of(2026, 6, 20),
+            LocalDate.of(2026, 6, 21),
+            TaskStatus.OPEN,
+            Priority.HIGH,
+            LocalDateTime.of(2026, 6, 19, 10, 15)
+        );
+        List<TodoTask> tasks = List.of(task);
+        when(taskService.getUserTasks("john")).thenReturn(tasks);
+        when(taskCsvExportService.exportTasks(tasks)).thenReturn("id,title,description,taskDate,plannedFinishDate,priority,status,createdAt\n");
+
+        ResponseEntity<byte[]> response = taskController.exportTasks(authentication);
+
+        verify(taskService).getUserTasks("john");
+        verify(taskCsvExportService).exportTasks(tasks);
+        assertEquals(response.getStatusCode().value(), 200);
+        assertEquals(response.getHeaders().getContentType().toString(), "text/csv");
+        assertEquals(new String(response.getBody(), StandardCharsets.UTF_8), "id,title,description,taskDate,plannedFinishDate,priority,status,createdAt\n");
+        String contentDisposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertTrue(contentDisposition.startsWith("attachment; filename=\"tasks-john-"));
+        assertTrue(contentDisposition.endsWith(LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv\""));
+    }
+
+    @Test
+    public void exportTasksShouldReturnHeaderOnlyCsvWhenUserHasNoTasks() {
+        org.springframework.security.core.Authentication authentication = Mockito.mock(org.springframework.security.core.Authentication.class);
+        when(authentication.getName()).thenReturn("john");
+        when(taskService.getUserTasks("john")).thenReturn(List.of());
+        when(taskCsvExportService.exportTasks(List.of())).thenReturn(TaskCsvExportService.HEADER + "\n");
+
+        ResponseEntity<byte[]> response = taskController.exportTasks(authentication);
+
+        verify(taskService).getUserTasks("john");
+        assertEquals(new String(response.getBody(), StandardCharsets.UTF_8), TaskCsvExportService.HEADER + "\n");
     }
 
     @Test

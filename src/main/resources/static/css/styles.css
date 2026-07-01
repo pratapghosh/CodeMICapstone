@@ -93,6 +93,8 @@ textarea:focus {
     color: #fff;
     cursor: pointer;
     font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .btn:hover {
@@ -154,6 +156,12 @@ textarea:focus {
     align-items: center;
 }
 
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .date-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -213,6 +221,7 @@ textarea:focus {
 
 @media (max-width: 720px) {
     .dashboard-header,
+    .dashboard-actions,
     .task-item {
         flex-direction: column;
         align-items: stretch;
