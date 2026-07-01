@@ -13,9 +13,12 @@
             <h1>Todo Dashboard</h1>
             <p class="subtitle">User: <strong th:text="${username}"></strong></p>
         </div>
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="btn secondary">Logout</button>
-        </form>
+        <div class="dashboard-actions">
+            <a th:href="@{/tasks/export}" class="btn secondary">Export CSV</a>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn secondary">Logout</button>
+            </form>
+        </div>
     </header>
 
     <section class="card">

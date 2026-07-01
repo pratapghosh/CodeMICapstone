@@ -6,6 +6,7 @@ A production-grade sample Todo application with:
 - User-specific task visibility
 - Date-based task planning
 - Planned finish date tracking
+- CSV export for authenticated users
 - Local file-system persistence (no database)
 
 ## Tech Stack
@@ -25,11 +26,23 @@ A production-grade sample Todo application with:
 	- Task date
 	- Planned finish date
 - Mark tasks as completed
+- Export your task list from the dashboard as a CSV download
 - Clean layered architecture:
 	- Controller
 	- Service
 	- Repository
 	- Storage utility
+
+## CSV Export
+
+Authenticated users can click **Export CSV** on the task dashboard to download their own tasks.
+
+- Endpoint: `GET /tasks/export`
+- Response content type: `text/csv`
+- Filename convention: `tasks-<username>-<yyyyMMdd>.csv`
+- Columns: `id,title,description,taskDate,plannedFinishDate,priority,status,createdAt`
+- Exported data is scoped to the currently logged-in user and includes only tasks returned for that user.
+- Empty task lists export a valid CSV containing only the header row.
 
 ## Project Structure
 
@@ -157,4 +170,5 @@ mvn test
 2. Login
 3. Add task with task date and planned finish date
 4. See only your own tasks
-5. Mark task as completed
+5. Export your tasks from the dashboard as CSV, if needed
+6. Mark task as completed

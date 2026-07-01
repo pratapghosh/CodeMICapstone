@@ -2,8 +2,13 @@ package com.capstone.todo.web;
 
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.dto.TaskForm;
+import com.capstone.todo.service.TaskCsvExportService;
 import com.capstone.todo.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,13 +18,19 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @Controller
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskCsvExportService taskCsvExportService;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, TaskCsvExportService taskCsvExportService) {
         this.taskService = taskService;
+        this.taskCsvExportService = taskCsvExportService;
     }
 
     @GetMapping("/")
@@ -35,6 +46,25 @@ public class TaskController {
         model.addAttribute("editTaskForm", new TaskForm());
         model.addAttribute("username", username);
         return "tasks";
+    }
+
+    @GetMapping("/tasks/export")
+    public ResponseEntity<byte[]> exportTasks(Authentication authentication) {
+        String username = authentication.getName();
+        String csv = taskCsvExportService.exportTasks(taskService.getUserTasks(username));
+        byte[] body = csv.getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("text/csv"))
+            .contentLength(body.length)
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.attachment()
+                    .filename(exportFilename(username))
+                    .build()
+                    .toString()
+            )
+            .body(body);
     }
 
     @GetMapping("/tasks/{taskId}/edit")
@@ -125,6 +155,10 @@ public class TaskController {
     public String markTaskCompleted(Authentication authentication, @PathVariable String taskId) {
         taskService.markCompleted(authentication.getName(), taskId);
         return "redirect:/tasks";
+    }
+
+    private String exportFilename(String username) {
+        return "tasks-" + username + "-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
     }
 
     private TaskForm mapToForm(TodoTask task) {
