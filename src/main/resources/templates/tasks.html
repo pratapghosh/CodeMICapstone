@@ -80,10 +80,16 @@
                        th:text="${task.status}"></p>
                 </div>
 
-                <a th:if="${task.status.name() == 'OPEN'}" th:href="@{|/tasks/${task.id}/edit|}" class="btn secondary">Edit</a>
-                <form th:if="${task.status.name() == 'OPEN'}" th:action="@{|/tasks/${task.id}/complete|}" method="post">
-                    <button type="submit" class="btn success">Mark Completed</button>
-                </form>
+                <div class="task-actions">
+                    <a th:if="${task.status.name() == 'OPEN'}" th:href="@{|/tasks/${task.id}/edit|}" class="btn secondary">Edit</a>
+                    <form th:if="${task.status.name() == 'OPEN'}" th:action="@{|/tasks/${task.id}/complete|}" method="post">
+                        <button type="submit" class="btn success">Mark Completed</button>
+                    </form>
+                    <form th:action="@{|/tasks/${task.id}/delete|}" method="post"
+                          onsubmit="return confirm('Delete this task permanently?');">
+                        <button type="submit" class="btn danger">Delete</button>
+                    </form>
+                </div>
             </article>
         </div>
     </section>

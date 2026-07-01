@@ -14,4 +14,6 @@ public interface TaskRepository {
     Optional<TodoTask> findById(String username, String taskId);
 
     void update(TodoTask task);
+
+    void deleteById(String username, String taskId);
 }

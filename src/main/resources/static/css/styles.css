@@ -5,6 +5,7 @@
     --primary-hover: #1e40af;
     --secondary: #334155;
     --success: #15803d;
+    --danger: #b91c1c;
     --error-bg: #fee2e2;
     --error-text: #991b1b;
     --success-bg: #dcfce7;
@@ -107,6 +108,18 @@ textarea:focus {
 .btn.success {
     background: var(--success);
     margin-top: 0;
+}
+
+.btn.danger {
+    background: var(--danger);
+    margin-top: 0;
+}
+
+.task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
 }
 
 .footer-link {
