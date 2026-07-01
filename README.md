@@ -16,6 +16,7 @@ A production-grade sample Todo application with:
 - Spring MVC + Thymeleaf (backend + frontend)
 - Jackson (JSON file persistence)
 - Maven
+- Playwright for UI end-to-end testing
 
 ## Features
 
@@ -49,6 +50,14 @@ src/main/resources
 |- templates/         # Thymeleaf views
 |- static/css/        # Frontend styles
 |- application.yml    # Configuration
+
+src/test
+|- java/              # Unit and integration tests
+|- ui/
+	|- fixtures/       # UI test data builders
+	|- pages/          # Playwright page objects
+	|- specs/auth/     # Authentication UI scenarios
+	|- playwright.config.js
 ```
 
 ## File-Based Persistence
@@ -101,18 +110,15 @@ mvn clean package
 ```bash
 mvn spring-boot:run
 ```
-3. Start the application through Jar file
-	```bash
-	java -jar <jar_file_name>
-	```
-Or run the packaged JAR generated under `target/artifact`.
+
+3. Or run the packaged JAR generated under `target/artifact`.
 Other build outputs such as classes and test-classes remain directly under `target`:
 
 ```powershell
 java -jar .\target\artifact\todo-app-1.0.0.jar
 ```
 
-3. Open:
+4. Open:
 
 `http://localhost:8080`
 
@@ -129,6 +135,45 @@ If `mvn` still fails in an old terminal session, use:
 ```bash
 mvn test
 ```
+
+## UI Test
+
+Playwright UI tests live under `src/test/ui` and target the application running at `http://localhost:8080`.
+
+Prerequisites for UI tests:
+
+- Node.js 18+ installed
+- the Todo app already running locally on port 8080
+
+Install Playwright dependencies:
+
+```bash
+npm install
+npm run ui:install
+```
+
+Run the UI suite in headless mode:
+
+```bash
+npm run ui:test
+```
+
+Run the UI suite in headed mode:
+
+```bash
+npm run ui:test:headed
+```
+
+Debug a UI test run:
+
+```bash
+npm run ui:test:debug
+```
+
+Generated Playwright outputs:
+
+- HTML report: `target/playwright-report/index.html`
+- Screenshots, videos, traces, and raw results: `target/playwright-results`
 
 ## Design Principles and Standards
 
