@@ -18,13 +18,13 @@
         </form>
     </header>
 
-    <section class="card">
+    <section class="card" th:object="${taskForm}">
         <h2>Create New Task</h2>
 
         <div th:if="${#fields.hasGlobalErrors()}" class="alert error" th:each="error : ${#fields.globalErrors()}"
              th:text="${error}"></div>
 
-        <form th:action="@{/tasks}" th:object="${taskForm}" method="post" class="form-grid">
+        <form th:action="@{/tasks}" method="post" class="form-grid">
             <label for="title">Task Title</label>
             <input id="title" type="text" th:field="*{title}" required>
             <p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
@@ -44,6 +44,8 @@
                     <input id="plannedFinishDate" type="date" th:field="*{plannedFinishDate}" required>
                     <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDate')}"
                        th:errors="*{plannedFinishDate}"></p>
+                    <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDateValid')}"
+                       th:errors="*{plannedFinishDateValid}"></p>
                 </div>
             </div>
 
@@ -54,6 +56,32 @@
                 <option value="LOW">LOW</option>
             </select>
             <p class="field-error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></p>
+
+            <div class="date-grid">
+                <div>
+                    <label for="recurrence">Recurrence</label>
+                    <select id="recurrence" th:field="*{recurrence}" required>
+                        <option th:each="recurrenceType : ${recurrenceTypes}"
+                                th:value="${recurrenceType.name()}"
+                                th:text="${recurrenceType.name()}"></option>
+                    </select>
+                    <p class="field-hint">Choose NONE for a standard one-time task.</p>
+                    <p class="field-error" th:if="${#fields.hasErrors('recurrence')}" th:errors="*{recurrence}"></p>
+                    <p class="field-error" th:if="${#fields.hasErrors('recurrenceValueValid')}"
+                       th:errors="*{recurrenceValueValid}"></p>
+                </div>
+                <div>
+                    <label for="recurrenceEndDate">Recurrence End Date</label>
+                    <input id="recurrenceEndDate" type="date" th:field="*{recurrenceEndDate}">
+                    <p class="field-hint">Required for DAILY, WEEKLY, and MONTHLY recurrence.</p>
+                    <p class="field-error" th:if="${#fields.hasErrors('recurrenceEndDate')}"
+                       th:errors="*{recurrenceEndDate}"></p>
+                    <p class="field-error" th:if="${#fields.hasErrors('recurrenceEndDatePresentForRecurringTasks')}"
+                       th:errors="*{recurrenceEndDatePresentForRecurringTasks}"></p>
+                    <p class="field-error" th:if="${#fields.hasErrors('recurrenceEndDateValid')}"
+                       th:errors="*{recurrenceEndDateValid}"></p>
+                </div>
+            </div>
 
             <button type="submit" class="btn">Add Task</button>
         </form>
@@ -69,12 +97,19 @@
         <div class="task-list" th:if="${!#lists.isEmpty(tasks)}">
             <article class="task-item" th:each="task : ${tasks}">
                 <div class="task-main">
-                    <h3 th:text="${task.title}"></h3>
+                    <div class="task-title-row">
+                        <h3 th:text="${task.title}"></h3>
+                        <span th:if="${task.recurringOccurrence}" class="recurring-badge"
+                              th:text="${task.recurrenceType != null ? 'Recurring: ' + task.recurrenceType : 'Recurring'}"></span>
+                    </div>
                     <p class="task-description" th:text="${task.description}"></p>
                     <p class="task-dates">
                         Task Date: <strong th:text="${task.taskDate}"></strong>
                         | Planned Finish: <strong th:text="${task.plannedFinishDate}"></strong>
                         | Priority: <strong th:text="${task.priority}"></strong>
+                    </p>
+                    <p class="recurrence-series" th:if="${task.recurringOccurrence and task.recurrenceSeriesId != null}">
+                        Generated recurring occurrence
                     </p>
                     <p class="status" th:classappend="${task.status.name() == 'COMPLETED'} ? 'completed' : 'open'"
                        th:text="${task.status}"></p>
@@ -114,6 +149,8 @@
                     <input id="edit-plannedFinishDate" type="date" th:field="*{plannedFinishDate}" required>
                     <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDate')}"
                        th:errors="*{plannedFinishDate}"></p>
+                    <p class="field-error" th:if="${#fields.hasErrors('plannedFinishDateValid')}"
+                       th:errors="*{plannedFinishDateValid}"></p>
                 </div>
             </div>
 

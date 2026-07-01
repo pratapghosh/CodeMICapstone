@@ -1,7 +1,9 @@
 package com.capstone.todo.dto;
 
 import com.capstone.todo.domain.Priority;
+import com.capstone.todo.domain.RecurrenceType;
 import com.capstone.todo.dto.validation.ValidPriority;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -29,6 +31,12 @@ public class TaskForm {
     @NotNull(message = "Priority is required")
     @ValidPriority
     private String priority = Priority.MEDIUM.name();
+
+    @NotNull(message = "Recurrence is required")
+    private String recurrence = RecurrenceType.NONE.name();
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate recurrenceEndDate;
 
     public String getTitle() {
         return title;
@@ -68,5 +76,63 @@ public class TaskForm {
 
     public void setPriority(String priority) {
         this.priority = priority;
+    }
+
+    public String getRecurrence() {
+        return recurrence;
+    }
+
+    public void setRecurrence(String recurrence) {
+        this.recurrence = recurrence;
+    }
+
+    public LocalDate getRecurrenceEndDate() {
+        return recurrenceEndDate;
+    }
+
+    public void setRecurrenceEndDate(LocalDate recurrenceEndDate) {
+        this.recurrenceEndDate = recurrenceEndDate;
+    }
+
+    @AssertTrue(message = "Recurrence must be NONE, DAILY, WEEKLY, or MONTHLY")
+    public boolean isRecurrenceValueValid() {
+        return parseRecurrence() != null;
+    }
+
+    @AssertTrue(message = "Planned finish date cannot be before task date")
+    public boolean isPlannedFinishDateValid() {
+        if (taskDate == null || plannedFinishDate == null) {
+            return true;
+        }
+        return !plannedFinishDate.isBefore(taskDate);
+    }
+
+    @AssertTrue(message = "Recurrence end date is required for recurring tasks")
+    public boolean isRecurrenceEndDatePresentForRecurringTasks() {
+        RecurrenceType recurrenceType = parseRecurrence();
+        if (recurrenceType == null || recurrenceType == RecurrenceType.NONE) {
+            return true;
+        }
+        return recurrenceEndDate != null;
+    }
+
+    @AssertTrue(message = "Recurrence end date cannot be before task date")
+    public boolean isRecurrenceEndDateValid() {
+        RecurrenceType recurrenceType = parseRecurrence();
+        if (recurrenceType == null || recurrenceType == RecurrenceType.NONE || taskDate == null || recurrenceEndDate == null) {
+            return true;
+        }
+        return !recurrenceEndDate.isBefore(taskDate);
+    }
+
+    private RecurrenceType parseRecurrence() {
+        if (recurrence == null) {
+            return null;
+        }
+        try {
+            return RecurrenceType.valueOf(recurrence.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.capstone.todo.service.impl;
 
 import com.capstone.todo.domain.Priority;
+import com.capstone.todo.domain.RecurrenceType;
 import com.capstone.todo.domain.TaskStatus;
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.dto.TaskForm;
@@ -19,9 +20,11 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
@@ -57,22 +60,95 @@ public class DefaultTaskServiceTest {
             "HIGH"
         );
 
-        when(taskRepository.save(any(TodoTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(taskRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         TodoTask createdTask = taskService.createTask("  Alice  ", taskForm);
 
-        ArgumentCaptor<TodoTask> taskCaptor = ArgumentCaptor.forClass(TodoTask.class);
-        verify(taskRepository).save(taskCaptor.capture());
+        ArgumentCaptor<List<TodoTask>> taskCaptor = ArgumentCaptor.forClass(List.class);
+        verify(taskRepository).saveAll(taskCaptor.capture());
 
-        TodoTask savedTask = taskCaptor.getValue();
+        List<TodoTask> savedTasks = taskCaptor.getValue();
+        assertEquals(savedTasks.size(), 1);
+        TodoTask savedTask = savedTasks.getFirst();
         assertEquals(savedTask.getUsername(), "alice");
         assertEquals(savedTask.getTitle(), "Prepare release notes");
         assertEquals(savedTask.getDescription(), "Include deployment checklist");
         assertEquals(savedTask.getStatus(), TaskStatus.OPEN);
         assertEquals(savedTask.getPriority(), Priority.HIGH);
+        assertFalse(savedTask.isRecurringOccurrence());
         assertNotNull(savedTask.getId());
         assertNotNull(savedTask.getCreatedAt());
         assertEquals(createdTask.getUsername(), "alice");
+    }
+
+    @Test
+    public void createTaskShouldGenerateDailyOccurrencesInclusiveOfEndDate() {
+        TaskForm taskForm = taskForm("Daily standup", "desc", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 2), "MEDIUM");
+        taskForm.setRecurrence(RecurrenceType.DAILY.name());
+        taskForm.setRecurrenceEndDate(LocalDate.of(2026, 7, 4));
+        when(taskRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        taskService.createTask("Alice", taskForm);
+
+        ArgumentCaptor<List<TodoTask>> taskCaptor = ArgumentCaptor.forClass(List.class);
+        verify(taskRepository).saveAll(taskCaptor.capture());
+        List<TodoTask> tasks = taskCaptor.getValue();
+        assertEquals(tasks.size(), 4);
+        assertOccurrence(tasks.get(0), LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 2), RecurrenceType.DAILY);
+        assertOccurrence(tasks.get(1), LocalDate.of(2026, 7, 2), LocalDate.of(2026, 7, 3), RecurrenceType.DAILY);
+        assertOccurrence(tasks.get(2), LocalDate.of(2026, 7, 3), LocalDate.of(2026, 7, 4), RecurrenceType.DAILY);
+        assertOccurrence(tasks.get(3), LocalDate.of(2026, 7, 4), LocalDate.of(2026, 7, 5), RecurrenceType.DAILY);
+        assertEquals(tasks.stream().map(TodoTask::getRecurrenceSeriesId).distinct().count(), 1);
+    }
+
+    @Test
+    public void createTaskShouldGenerateWeeklyOccurrencesSpacedSevenDaysApart() {
+        TaskForm taskForm = taskForm("Weekly review", "desc", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3), "LOW");
+        taskForm.setRecurrence(RecurrenceType.WEEKLY.name());
+        taskForm.setRecurrenceEndDate(LocalDate.of(2026, 7, 16));
+        when(taskRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        taskService.createTask("Alice", taskForm);
+
+        ArgumentCaptor<List<TodoTask>> taskCaptor = ArgumentCaptor.forClass(List.class);
+        verify(taskRepository).saveAll(taskCaptor.capture());
+        List<TodoTask> tasks = taskCaptor.getValue();
+        assertEquals(tasks.size(), 3);
+        assertOccurrence(tasks.get(0), LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3), RecurrenceType.WEEKLY);
+        assertOccurrence(tasks.get(1), LocalDate.of(2026, 7, 8), LocalDate.of(2026, 7, 10), RecurrenceType.WEEKLY);
+        assertOccurrence(tasks.get(2), LocalDate.of(2026, 7, 15), LocalDate.of(2026, 7, 17), RecurrenceType.WEEKLY);
+    }
+
+    @Test
+    public void createTaskShouldGenerateMonthlyOccurrencesUsingLocalDatePlusMonths() {
+        TaskForm taskForm = taskForm("Monthly close", "desc", LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 2), "HIGH");
+        taskForm.setRecurrence(RecurrenceType.MONTHLY.name());
+        taskForm.setRecurrenceEndDate(LocalDate.of(2026, 4, 30));
+        when(taskRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        taskService.createTask("Alice", taskForm);
+
+        ArgumentCaptor<List<TodoTask>> taskCaptor = ArgumentCaptor.forClass(List.class);
+        verify(taskRepository).saveAll(taskCaptor.capture());
+        List<TodoTask> tasks = taskCaptor.getValue();
+        assertEquals(tasks.size(), 4);
+        assertOccurrence(tasks.get(0), LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 2), RecurrenceType.MONTHLY);
+        assertOccurrence(tasks.get(1), LocalDate.of(2026, 2, 28), LocalDate.of(2026, 3, 2), RecurrenceType.MONTHLY);
+        assertOccurrence(tasks.get(2), LocalDate.of(2026, 3, 28), LocalDate.of(2026, 4, 2), RecurrenceType.MONTHLY);
+        assertOccurrence(tasks.get(3), LocalDate.of(2026, 4, 28), LocalDate.of(2026, 5, 2), RecurrenceType.MONTHLY);
+    }
+
+    @Test
+    public void createTaskShouldFailWhenRecurrenceEndDateIsBeforeTaskDateAndSaveNothing() {
+        TaskForm taskForm = taskForm("Prepare docs", "desc", LocalDate.of(2026, 6, 21), LocalDate.of(2026, 6, 22), "MEDIUM");
+        taskForm.setRecurrence(RecurrenceType.DAILY.name());
+        taskForm.setRecurrenceEndDate(LocalDate.of(2026, 6, 20));
+
+        IllegalArgumentException exception = expectThrows(IllegalArgumentException.class,
+            () -> taskService.createTask("alice", taskForm));
+
+        assertEquals(exception.getMessage(), "Recurrence end date cannot be before task date");
+        verify(taskRepository, never()).saveAll(any());
     }
 
     @Test
@@ -177,7 +253,7 @@ public class DefaultTaskServiceTest {
             LocalDate.of(2026, 6, 22),
             "MEDIUM"
         );
-        when(taskRepository.save(any(TodoTask.class))).thenThrow(new IllegalStateException("write failed"));
+        when(taskRepository.saveAll(any())).thenThrow(new IllegalStateException("write failed"));
 
         IllegalStateException exception = expectThrows(IllegalStateException.class,
             () -> taskService.createTask("alice", taskForm));
@@ -214,6 +290,15 @@ public class DefaultTaskServiceTest {
             () -> taskService.updateTask("alice", "task-1", taskForm));
 
         assertTrue(exception.getMessage().contains("write failed"));
+    }
+
+    private void assertOccurrence(TodoTask task, LocalDate taskDate, LocalDate plannedFinishDate, RecurrenceType recurrenceType) {
+        assertEquals(task.getTaskDate(), taskDate);
+        assertEquals(task.getPlannedFinishDate(), plannedFinishDate);
+        assertEquals(task.getStatus(), TaskStatus.OPEN);
+        assertTrue(task.isRecurringOccurrence());
+        assertEquals(task.getRecurrenceType(), recurrenceType);
+        assertNotNull(task.getRecurrenceSeriesId());
     }
 
     private TaskForm taskForm(String title,

@@ -11,6 +11,12 @@ public interface TaskRepository {
 
     TodoTask save(TodoTask task);
 
+    default List<TodoTask> saveAll(List<TodoTask> tasks) {
+        return tasks.stream()
+            .map(this::save)
+            .toList();
+    }
+
     Optional<TodoTask> findById(String username, String taskId);
 
     void update(TodoTask task);

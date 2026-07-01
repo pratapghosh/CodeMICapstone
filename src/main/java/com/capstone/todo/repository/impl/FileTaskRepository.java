@@ -41,6 +41,23 @@ public class FileTaskRepository implements TaskRepository {
     }
 
     @Override
+    public List<TodoTask> saveAll(List<TodoTask> tasksToSave) {
+        if (tasksToSave.isEmpty()) {
+            return List.of();
+        }
+
+        String username = tasksToSave.getFirst().getUsername();
+        if (tasksToSave.stream().anyMatch(task -> !username.equals(task.getUsername()))) {
+            throw new IllegalArgumentException("All tasks must belong to the same user");
+        }
+
+        List<TodoTask> tasks = readTasks(username);
+        tasks.addAll(tasksToSave);
+        fileStorageManager.writeList(resolveTaskFilePath(username), tasks);
+        return tasksToSave;
+    }
+
+    @Override
     public Optional<TodoTask> findById(String username, String taskId) {
         return readTasks(username).stream()
             .filter(task -> task.getId().equals(taskId))
