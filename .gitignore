@@ -8,7 +8,7 @@
 target/
 
 # Runtime storage for local file persistence
-storage/
+/storage/
 
 # IDE and OS files
 .idea/

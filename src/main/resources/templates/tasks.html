@@ -60,28 +60,88 @@
     </section>
 
     <section class="card">
-        <h2>My Task List</h2>
+        <div class="section-header">
+            <h2>My Task List</h2>
+            <a th:if="${hasActiveFilters}" th:href="@{/tasks}" class="clear-link">Clear filters</a>
+        </div>
 
-        <div th:if="${#lists.isEmpty(tasks)}" class="empty-state">
+        <form th:action="@{/tasks}" method="get" class="filter-bar">
+            <div class="filter-field search-field">
+                <label for="q">Search</label>
+                <input id="q" name="q" type="search" placeholder="Title or description" th:value="${query.q}">
+            </div>
+
+            <div class="filter-field">
+                <label for="status-filter">Status</label>
+                <select id="status-filter" name="status">
+                    <option th:each="statusFilter : ${statusFilters}"
+                            th:value="${statusFilter}"
+                            th:selected="${statusFilter == query.status}"
+                            th:text="${statusFilter}"></option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="priority-filter">Priority</label>
+                <select id="priority-filter" name="priority">
+                    <option th:each="priorityFilter : ${priorityFilters}"
+                            th:value="${priorityFilter}"
+                            th:selected="${priorityFilter == query.priority}"
+                            th:text="${priorityFilter}"></option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="date-filter">Date</label>
+                <select id="date-filter" name="dateFilter">
+                    <option th:each="dateFilterOption : ${dateFilters}"
+                            th:value="${dateFilterOption}"
+                            th:selected="${dateFilterOption == query.dateFilter}"
+                            th:text="${dateFilterOption}"></option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="sort-filter">Sort</label>
+                <select id="sort-filter" name="sort">
+                    <option th:each="sortOption : ${sortOptions}"
+                            th:value="${sortOption}"
+                            th:selected="${sortOption == query.sort}"
+                            th:text="${sortOption == T(com.capstone.todo.service.TaskDashboardQuery.SortOption).PLANNED_FINISH_ASC ? 'PLANNED FINISH ASC' : sortOption}"></option>
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn">Apply</button>
+            </div>
+        </form>
+
+        <div th:if="${#lists.isEmpty(taskDisplays)}" class="empty-state"
+             th:text="${hasActiveFilters} ? 'No tasks match the selected search or filters.' : 'No tasks yet. Add your first task above.'">
             No tasks yet. Add your first task above.
         </div>
 
-        <div class="task-list" th:if="${!#lists.isEmpty(tasks)}">
-            <article class="task-item" th:each="task : ${tasks}">
+        <div class="task-list" th:if="${!#lists.isEmpty(taskDisplays)}">
+            <article class="task-item" th:each="display : ${taskDisplays}" th:classappend="${display.overdue} ? ' overdue-task' : ''">
                 <div class="task-main">
-                    <h3 th:text="${task.title}"></h3>
-                    <p class="task-description" th:text="${task.description}"></p>
+                    <div class="task-title-row">
+                        <h3 th:text="${display.task.title}"></h3>
+                        <span th:if="${display.overdue}" class="overdue-badge">Overdue</span>
+                    </div>
+                    <p class="task-description" th:text="${display.task.description}"></p>
                     <p class="task-dates">
-                        Task Date: <strong th:text="${task.taskDate}"></strong>
-                        | Planned Finish: <strong th:text="${task.plannedFinishDate}"></strong>
-                        | Priority: <strong th:text="${task.priority}"></strong>
+                        Task Date: <strong th:text="${display.task.taskDate}"></strong>
+                        | Planned Finish: <strong th:text="${display.task.plannedFinishDate}"></strong>
+                        | Priority: <strong th:text="${display.task.priority}"></strong>
                     </p>
-                    <p class="status" th:classappend="${task.status.name() == 'COMPLETED'} ? 'completed' : 'open'"
-                       th:text="${task.status}"></p>
+                    <p class="status" th:classappend="${display.task.status.name() == 'COMPLETED'} ? 'completed' : 'open'"
+                       th:text="${display.task.status}"></p>
                 </div>
 
-                <a th:if="${task.status.name() == 'OPEN'}" th:href="@{|/tasks/${task.id}/edit|}" class="btn secondary">Edit</a>
-                <form th:if="${task.status.name() == 'OPEN'}" th:action="@{|/tasks/${task.id}/complete|}" method="post">
+                <a th:if="${display.task.status.name() == 'OPEN'}"
+                   th:href="@{|/tasks/${display.task.id}/edit?q=${query.q}&status=${query.status}&priority=${query.priority}&dateFilter=${query.dateFilter}&sort=${query.sort}|}"
+                   class="btn secondary">Edit</a>
+                <form th:if="${display.task.status.name() == 'OPEN'}" th:action="@{|/tasks/${display.task.id}/complete|}" method="post">
                     <button type="submit" class="btn success">Mark Completed</button>
                 </form>
             </article>

@@ -12,6 +12,10 @@ public interface TaskService {
 
     List<TodoTask> getUserTasks(String username);
 
+    List<TodoTask> getUserTasks(String username, TaskDashboardQuery query);
+
+    List<TaskDisplay> getUserTaskDisplays(String username, TaskDashboardQuery query);
+
     Optional<TodoTask> getUserTask(String username, String taskId);
 
     void updateTask(String username, String taskId, TaskForm taskForm);
