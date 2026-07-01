@@ -26,6 +26,7 @@ A production-grade sample Todo application with:
 	- Task date
 	- Planned finish date
 - Mark tasks as completed
+- Delete tasks from your private task list with confirmation
 - Clean layered architecture:
 	- Controller
 	- Service
@@ -213,3 +214,4 @@ Generated Playwright outputs:
 3. Add task with task date and planned finish date
 4. See only your own tasks
 5. Mark task as completed
+6. Delete a task from the dashboard when it is no longer needed

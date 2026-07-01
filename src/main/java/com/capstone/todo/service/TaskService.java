@@ -17,4 +17,6 @@ public interface TaskService {
     void updateTask(String username, String taskId, TaskForm taskForm);
 
     void markCompleted(String username, String taskId);
+
+    void deleteTask(String username, String taskId);
 }

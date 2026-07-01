@@ -127,6 +127,12 @@ public class TaskController {
         return "redirect:/tasks";
     }
 
+    @PostMapping("/tasks/{taskId}/delete")
+    public String deleteTask(Authentication authentication, @PathVariable String taskId) {
+        taskService.deleteTask(authentication.getName(), taskId);
+        return "redirect:/tasks";
+    }
+
     private TaskForm mapToForm(TodoTask task) {
         TaskForm taskForm = new TaskForm();
         taskForm.setTitle(task.getTitle());

@@ -125,6 +125,25 @@ public class DefaultTaskServiceTest {
     }
 
     @Test
+    public void deleteTaskShouldDelegateWithNormalizedUsername() {
+        taskService.deleteTask("  ALICE ", "task-1");
+
+        verify(taskRepository).deleteById("alice", "task-1");
+    }
+
+    @Test
+    public void deleteTaskShouldExposeMissingTaskFailure() {
+        doThrow(new IllegalArgumentException("Task not found: task-404"))
+            .when(taskRepository).deleteById("alice", "task-404");
+
+        IllegalArgumentException exception = expectThrows(IllegalArgumentException.class,
+            () -> taskService.deleteTask("Alice", "task-404"));
+
+        assertTrue(exception.getMessage().contains("Task not found"));
+        verify(taskRepository).deleteById("alice", "task-404");
+    }
+
+    @Test
     public void getUserTasksShouldNormalizeUsernameBeforeLookup() {
         TodoTask todoTask = new TodoTask();
         todoTask.setId("task-1");

@@ -21,6 +21,7 @@ import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
@@ -92,6 +93,36 @@ public class FileTaskRepositoryTest {
         Path taskFile = testStorageRoot.resolve("tasks").resolve("alice.json");
         assertTrue(Files.exists(taskFile));
         assertNotNull(updatedTask.getCreatedAt());
+    }
+
+    @Test
+    public void deleteByIdShouldRemoveOnlyRequestedUserTaskAndPersistChanges() {
+        TodoTask aliceTaskOne = createTask("task-1", "alice", LocalDate.of(2026, 6, 21), LocalDateTime.now());
+        TodoTask aliceTaskTwo = createTask("task-2", "alice", LocalDate.of(2026, 6, 22), LocalDateTime.now());
+        TodoTask bobTask = createTask("task-1", "bob", LocalDate.of(2026, 6, 23), LocalDateTime.now());
+        fileTaskRepository.save(aliceTaskOne);
+        fileTaskRepository.save(aliceTaskTwo);
+        fileTaskRepository.save(bobTask);
+
+        fileTaskRepository.deleteById("alice", "task-1");
+
+        List<TodoTask> aliceTasks = fileTaskRepository.findByUsername("alice");
+        assertEquals(aliceTasks.size(), 1);
+        assertEquals(aliceTasks.get(0).getId(), "task-2");
+        assertFalse(fileTaskRepository.findById("alice", "task-1").isPresent());
+        assertTrue(fileTaskRepository.findById("bob", "task-1").isPresent());
+    }
+
+    @Test
+    public void deleteByIdShouldFailWhenTaskDoesNotExistForUser() {
+        TodoTask bobTask = createTask("task-1", "bob", LocalDate.of(2026, 6, 23), LocalDateTime.now());
+        fileTaskRepository.save(bobTask);
+
+        IllegalArgumentException exception = expectThrows(IllegalArgumentException.class,
+            () -> fileTaskRepository.deleteById("alice", "task-1"));
+
+        assertTrue(exception.getMessage().contains("Task not found"));
+        assertTrue(fileTaskRepository.findById("bob", "task-1").isPresent());
     }
 
     @Test

@@ -182,6 +182,30 @@ public class TaskControllerTest {
     }
 
     @Test
+    public void deleteTaskShouldDelegateUsingAuthenticatedUsernameAndRedirect() {
+        org.springframework.security.core.Authentication authentication = Mockito.mock(org.springframework.security.core.Authentication.class);
+        when(authentication.getName()).thenReturn("john");
+
+        String view = taskController.deleteTask(authentication, "task-1");
+
+        verify(taskService).deleteTask("john", "task-1");
+        assertEquals(view, "redirect:/tasks");
+    }
+
+    @Test
+    public void deleteTaskShouldPropagateMissingTaskFailure() {
+        org.springframework.security.core.Authentication authentication = Mockito.mock(org.springframework.security.core.Authentication.class);
+        when(authentication.getName()).thenReturn("john");
+        doThrow(new IllegalArgumentException("Task not found: task-404"))
+            .when(taskService).deleteTask("john", "task-404");
+
+        org.testng.Assert.expectThrows(IllegalArgumentException.class,
+            () -> taskController.deleteTask(authentication, "task-404"));
+
+        verify(taskService).deleteTask("john", "task-404");
+    }
+
+    @Test
     public void markTaskCompletedShouldDelegateAndRedirect() {
         org.springframework.security.core.Authentication authentication = Mockito.mock(org.springframework.security.core.Authentication.class);
         when(authentication.getName()).thenReturn("john");

@@ -60,6 +60,16 @@ public class FileTaskRepository implements TaskRepository {
         throw new IllegalArgumentException("Task not found: " + task.getId());
     }
 
+    @Override
+    public void deleteById(String username, String taskId) {
+        List<TodoTask> tasks = readTasks(username);
+        boolean removed = tasks.removeIf(task -> task.getId().equals(taskId));
+        if (!removed) {
+            throw new IllegalArgumentException("Task not found: " + taskId);
+        }
+        fileStorageManager.writeList(resolveTaskFilePath(username), tasks);
+    }
+
     private List<TodoTask> readTasks(String username) {
         return fileStorageManager.readList(resolveTaskFilePath(username), TodoTask.class);
     }

@@ -93,6 +93,17 @@ public class DefaultTaskService implements TaskService {
         taskRepository.update(task);
     }
 
+    @Override
+    public void deleteTask(String username, String taskId) {
+        String normalizedUsername = normalizeUsername(username);
+        try {
+            taskRepository.deleteById(normalizedUsername, taskId);
+        } catch (IllegalStateException exception) {
+            logger.error("Storage failure while deleting task '{}' for user '{}'", taskId, normalizedUsername, exception);
+            throw exception;
+        }
+    }
+
     private String normalizeUsername(String username) {
         return username.trim().toLowerCase(Locale.ROOT);
     }
