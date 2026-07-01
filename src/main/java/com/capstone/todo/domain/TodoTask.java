@@ -18,6 +18,9 @@ public class TodoTask {
     @JsonDeserialize(using = PriorityDeserializer.class)
     private Priority priority = Priority.MEDIUM;
     private LocalDateTime createdAt;
+    private boolean recurringOccurrence;
+    private String recurrenceSeriesId;
+    private RecurrenceType recurrenceType;
 
     public TodoTask() {
     }
@@ -42,6 +45,21 @@ public class TodoTask {
                     TaskStatus status,
                     Priority priority,
                     LocalDateTime createdAt) {
+        this(id, username, title, description, taskDate, plannedFinishDate, status, priority, createdAt, false, null, null);
+    }
+
+    public TodoTask(String id,
+                    String username,
+                    String title,
+                    String description,
+                    LocalDate taskDate,
+                    LocalDate plannedFinishDate,
+                    TaskStatus status,
+                    Priority priority,
+                    LocalDateTime createdAt,
+                    boolean recurringOccurrence,
+                    String recurrenceSeriesId,
+                    RecurrenceType recurrenceType) {
         this.id = id;
         this.username = username;
         this.title = title;
@@ -51,6 +69,9 @@ public class TodoTask {
         this.status = status;
         this.priority = priority;
         this.createdAt = createdAt;
+        this.recurringOccurrence = recurringOccurrence;
+        this.recurrenceSeriesId = recurrenceSeriesId;
+        this.recurrenceType = recurrenceType;
     }
 
     public String getId() {
@@ -123,6 +144,30 @@ public class TodoTask {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isRecurringOccurrence() {
+        return recurringOccurrence;
+    }
+
+    public void setRecurringOccurrence(boolean recurringOccurrence) {
+        this.recurringOccurrence = recurringOccurrence;
+    }
+
+    public String getRecurrenceSeriesId() {
+        return recurrenceSeriesId;
+    }
+
+    public void setRecurrenceSeriesId(String recurrenceSeriesId) {
+        this.recurrenceSeriesId = recurrenceSeriesId;
+    }
+
+    public RecurrenceType getRecurrenceType() {
+        return recurrenceType;
+    }
+
+    public void setRecurrenceType(RecurrenceType recurrenceType) {
+        this.recurrenceType = recurrenceType;
     }
 
     @Override

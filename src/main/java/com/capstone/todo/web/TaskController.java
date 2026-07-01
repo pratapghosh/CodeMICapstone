@@ -1,5 +1,6 @@
 package com.capstone.todo.web;
 
+import com.capstone.todo.domain.RecurrenceType;
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.dto.TaskForm;
 import com.capstone.todo.service.TaskService;
@@ -30,10 +31,9 @@ public class TaskController {
     @GetMapping("/tasks")
     public String taskDashboard(Authentication authentication, Model model) {
         String username = authentication.getName();
-        model.addAttribute("tasks", taskService.getUserTasks(username));
+        populateDashboardModel(model, username);
         model.addAttribute("taskForm", new TaskForm());
         model.addAttribute("editTaskForm", new TaskForm());
-        model.addAttribute("username", username);
         return "tasks";
     }
 
@@ -45,11 +45,10 @@ public class TaskController {
         TodoTask task = taskService.getUserTask(username, taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found"));
 
-        model.addAttribute("tasks", taskService.getUserTasks(username));
+        populateDashboardModel(model, username);
         model.addAttribute("taskForm", new TaskForm());
         model.addAttribute("editTaskForm", mapToForm(task));
         model.addAttribute("editingTaskId", taskId);
-        model.addAttribute("username", username);
         return "tasks";
     }
 
@@ -61,9 +60,8 @@ public class TaskController {
         String username = authentication.getName();
 
         if (bindingResult.hasErrors()) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("editTaskForm", new TaskForm());
-            model.addAttribute("username", username);
             return "tasks";
         }
 
@@ -71,15 +69,13 @@ public class TaskController {
             taskService.createTask(username, taskForm);
             return "redirect:/tasks";
         } catch (IllegalArgumentException exception) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("editTaskForm", new TaskForm());
-            model.addAttribute("username", username);
             bindingResult.reject("task.error", exception.getMessage());
             return "tasks";
         } catch (IllegalStateException exception) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("editTaskForm", new TaskForm());
-            model.addAttribute("username", username);
             bindingResult.reject("task.error", "Could not save task. Please try again.");
             return "tasks";
         }
@@ -94,10 +90,9 @@ public class TaskController {
         String username = authentication.getName();
 
         if (bindingResult.hasErrors()) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("taskForm", new TaskForm());
             model.addAttribute("editingTaskId", taskId);
-            model.addAttribute("username", username);
             return "tasks";
         }
 
@@ -105,17 +100,15 @@ public class TaskController {
             taskService.updateTask(username, taskId, taskForm);
             return "redirect:/tasks";
         } catch (IllegalArgumentException exception) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("taskForm", new TaskForm());
             model.addAttribute("editingTaskId", taskId);
-            model.addAttribute("username", username);
             bindingResult.reject("task.error", exception.getMessage());
             return "tasks";
         } catch (IllegalStateException exception) {
-            model.addAttribute("tasks", taskService.getUserTasks(username));
+            populateDashboardModel(model, username);
             model.addAttribute("taskForm", new TaskForm());
             model.addAttribute("editingTaskId", taskId);
-            model.addAttribute("username", username);
             bindingResult.reject("task.error", "Could not save task changes. Please try again.");
             return "tasks";
         }
@@ -125,6 +118,12 @@ public class TaskController {
     public String markTaskCompleted(Authentication authentication, @PathVariable String taskId) {
         taskService.markCompleted(authentication.getName(), taskId);
         return "redirect:/tasks";
+    }
+
+    private void populateDashboardModel(Model model, String username) {
+        model.addAttribute("tasks", taskService.getUserTasks(username));
+        model.addAttribute("username", username);
+        model.addAttribute("recurrenceTypes", RecurrenceType.values());
     }
 
     private TaskForm mapToForm(TodoTask task) {

@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
 
 public class TodoTaskTest {
 
@@ -37,6 +39,9 @@ public class TodoTaskTest {
         task.setStatus(TaskStatus.OPEN);
         task.setPriority(Priority.MEDIUM);
         task.setCreatedAt(createdAt);
+        task.setRecurringOccurrence(true);
+        task.setRecurrenceSeriesId("series-1");
+        task.setRecurrenceType(RecurrenceType.WEEKLY);
 
         assertEquals(task.getId(), "id-1");
         assertEquals(task.getUsername(), "john");
@@ -47,5 +52,17 @@ public class TodoTaskTest {
         assertEquals(task.getStatus(), TaskStatus.OPEN);
         assertEquals(task.getPriority(), Priority.MEDIUM);
         assertEquals(task.getCreatedAt(), createdAt);
+        assertTrue(task.isRecurringOccurrence());
+        assertEquals(task.getRecurrenceSeriesId(), "series-1");
+        assertEquals(task.getRecurrenceType(), RecurrenceType.WEEKLY);
+    }
+
+    @Test
+    public void constructorShouldDefaultNonRecurringMetadata() {
+        TodoTask task = new TodoTask("id-1", "john", "Title", "Desc", LocalDate.now(), LocalDate.now(), TaskStatus.OPEN, Priority.HIGH, LocalDateTime.now());
+
+        assertFalse(task.isRecurringOccurrence());
+        assertEquals(task.getRecurrenceSeriesId(), null);
+        assertEquals(task.getRecurrenceType(), null);
     }
 }

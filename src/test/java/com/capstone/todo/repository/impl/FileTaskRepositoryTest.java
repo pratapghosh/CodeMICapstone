@@ -2,6 +2,7 @@ package com.capstone.todo.repository.impl;
 
 import com.capstone.todo.config.AppStorageProperties;
 import com.capstone.todo.domain.Priority;
+import com.capstone.todo.domain.RecurrenceType;
 import com.capstone.todo.domain.TaskStatus;
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.storage.FileStorageManager;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
@@ -66,6 +68,40 @@ public class FileTaskRepositoryTest {
     }
 
     @Test
+    public void saveAllShouldPersistMultipleTasksInSingleUserFile() {
+        TodoTask task1 = createTask("1", "alice", LocalDate.of(2026, 7, 1), LocalDateTime.of(2026, 6, 20, 10, 0));
+        task1.setRecurringOccurrence(true);
+        task1.setRecurrenceSeriesId("series-1");
+        task1.setRecurrenceType(RecurrenceType.DAILY);
+        TodoTask task2 = createTask("2", "alice", LocalDate.of(2026, 7, 2), LocalDateTime.of(2026, 6, 20, 10, 0));
+        task2.setRecurringOccurrence(true);
+        task2.setRecurrenceSeriesId("series-1");
+        task2.setRecurrenceType(RecurrenceType.DAILY);
+
+        List<TodoTask> savedTasks = fileTaskRepository.saveAll(List.of(task1, task2));
+        List<TodoTask> tasks = fileTaskRepository.findByUsername("alice");
+
+        assertEquals(savedTasks.size(), 2);
+        assertEquals(tasks.size(), 2);
+        assertTrue(tasks.get(0).isRecurringOccurrence());
+        assertEquals(tasks.get(0).getRecurrenceSeriesId(), "series-1");
+        assertEquals(tasks.get(0).getRecurrenceType(), RecurrenceType.DAILY);
+    }
+
+    @Test
+    public void saveAllShouldRejectTasksForDifferentUsers() {
+        TodoTask aliceTask = createTask("1", "alice", LocalDate.of(2026, 7, 1), LocalDateTime.now());
+        TodoTask bobTask = createTask("2", "bob", LocalDate.of(2026, 7, 2), LocalDateTime.now());
+
+        IllegalArgumentException exception = expectThrows(IllegalArgumentException.class,
+            () -> fileTaskRepository.saveAll(List.of(aliceTask, bobTask)));
+
+        assertEquals(exception.getMessage(), "All tasks must belong to the same user");
+        assertTrue(fileTaskRepository.findByUsername("alice").isEmpty());
+        assertTrue(fileTaskRepository.findByUsername("bob").isEmpty());
+    }
+
+    @Test
     public void findByIdShouldReturnTaskWhenItExists() {
         TodoTask task = createTask("task-1", "alice", LocalDate.of(2026, 6, 21), LocalDateTime.now());
         fileTaskRepository.save(task);
@@ -104,44 +140,47 @@ public class FileTaskRepositoryTest {
         assertTrue(exception.getMessage().contains("Task not found"));
     }
 
-        @Test
-        public void findByUsernameShouldDefaultMissingOrInvalidPriorityToMedium() throws IOException {
-                Path taskFile = testStorageRoot.resolve("tasks").resolve("alice.json");
-                Files.createDirectories(taskFile.getParent());
+    @Test
+    public void findByUsernameShouldDefaultMissingOrInvalidPriorityToMedium() throws IOException {
+        Path taskFile = testStorageRoot.resolve("tasks").resolve("alice.json");
+        Files.createDirectories(taskFile.getParent());
 
-                String json = """
-                        [
-                            {
-                                "id": "legacy-1",
-                                "username": "alice",
-                                "title": "Legacy without priority",
-                                "description": "desc",
-                                "taskDate": "2026-06-19",
-                                "plannedFinishDate": "2026-06-20",
-                                "status": "OPEN",
-                                "createdAt": "2026-06-19T10:00:00"
-                            },
-                            {
-                                "id": "legacy-2",
-                                "username": "alice",
-                                "title": "Legacy invalid priority",
-                                "description": "desc",
-                                "taskDate": "2026-06-19",
-                                "plannedFinishDate": "2026-06-20",
-                                "status": "OPEN",
-                                "priority": "urgent",
-                                "createdAt": "2026-06-19T11:00:00"
-                            }
-                        ]
-                        """;
-                Files.writeString(taskFile, json);
+        String json = """
+            [
+                {
+                    "id": "legacy-1",
+                    "username": "alice",
+                    "title": "Legacy without priority",
+                    "description": "desc",
+                    "taskDate": "2026-06-19",
+                    "plannedFinishDate": "2026-06-20",
+                    "status": "OPEN",
+                    "createdAt": "2026-06-19T10:00:00"
+                },
+                {
+                    "id": "legacy-2",
+                    "username": "alice",
+                    "title": "Legacy invalid priority",
+                    "description": "desc",
+                    "taskDate": "2026-06-19",
+                    "plannedFinishDate": "2026-06-20",
+                    "status": "OPEN",
+                    "priority": "urgent",
+                    "createdAt": "2026-06-19T11:00:00"
+                }
+            ]
+            """;
+        Files.writeString(taskFile, json);
 
-                List<TodoTask> tasks = fileTaskRepository.findByUsername("alice");
+        List<TodoTask> tasks = fileTaskRepository.findByUsername("alice");
 
-                assertEquals(tasks.size(), 2);
-                assertEquals(tasks.get(0).getPriority(), Priority.MEDIUM);
-                assertEquals(tasks.get(1).getPriority(), Priority.MEDIUM);
-        }
+        assertEquals(tasks.size(), 2);
+        assertEquals(tasks.get(0).getPriority(), Priority.MEDIUM);
+        assertEquals(tasks.get(1).getPriority(), Priority.MEDIUM);
+        assertFalse(tasks.get(0).isRecurringOccurrence());
+        assertEquals(tasks.get(0).getRecurrenceSeriesId(), null);
+        assertEquals(tasks.get(0).getRecurrenceType(), null);
+    }
 
     private TodoTask createTask(String id, String username, LocalDate taskDate, LocalDateTime createdAt) {
         return new TodoTask(

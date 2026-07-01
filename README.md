@@ -6,6 +6,7 @@ A production-grade sample Todo application with:
 - User-specific task visibility
 - Date-based task planning
 - Planned finish date tracking
+- Recurring task creation
 - Local file-system persistence (no database)
 
 ## Tech Stack
@@ -24,6 +25,9 @@ A production-grade sample Todo application with:
 - Add tasks with:
 	- Task date
 	- Planned finish date
+	- Priority
+	- Optional recurrence: none, daily, weekly, or monthly
+- Recurring task creation generates dated task occurrences with `OPEN` status
 - Mark tasks as completed
 - Clean layered architecture:
 	- Controller
@@ -59,6 +63,30 @@ Runtime data is stored under `storage/`:
 - `storage/tasks/<username>.json` for user-wise tasks
 
 The folder is generated automatically at runtime and is excluded in `.gitignore`.
+
+Recurring occurrences are persisted as normal task records in the same per-user JSON files. New recurrence metadata fields are additive, so older task records without those fields continue to load.
+
+## Recurring Tasks
+
+The Create New Task form includes a **Recurrence** selector and **Recurrence End Date** field.
+
+Available recurrence values:
+
+- `NONE` - creates exactly one task, matching the original behavior.
+- `DAILY` - creates one task per day from the task date through the recurrence end date, inclusive.
+- `WEEKLY` - creates tasks seven days apart through the recurrence end date, inclusive.
+- `MONTHLY` - creates tasks using Java `LocalDate.plusMonths` month arithmetic through the recurrence end date, inclusive.
+
+For recurring tasks, the recurrence end date is required to keep generation bounded. The application rejects recurring submissions when the recurrence end date is before the task date.
+
+Generated recurring occurrences:
+
+- belong only to the authenticated user who created them
+- copy the submitted title, description, and priority
+- start with `OPEN` status
+- shift both task date and planned finish date by the recurrence interval
+- display a recurring badge on the dashboard
+- are generated once at creation time; the app does not automatically create more occurrences later
 
 ## Run Locally
 
@@ -155,6 +183,6 @@ mvn test
 
 1. Register a new user
 2. Login
-3. Add task with task date and planned finish date
-4. See only your own tasks
-5. Mark task as completed
+3. Add task with task date, planned finish date, priority, and recurrence selection
+4. See only your own tasks, with recurring occurrences clearly marked
+5. Mark task occurrences as completed
