@@ -5,6 +5,8 @@ import com.capstone.todo.domain.TaskStatus;
 import com.capstone.todo.domain.TodoTask;
 import com.capstone.todo.dto.TaskForm;
 import com.capstone.todo.repository.TaskRepository;
+import com.capstone.todo.service.TaskDashboardQuery;
+import com.capstone.todo.service.TaskDisplay;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -12,8 +14,11 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,11 +27,15 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
 public class DefaultTaskServiceTest {
+
+    private static final LocalDate TODAY = LocalDate.of(2026, 6, 20);
+    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-06-20T10:00:00Z"), ZoneId.of("UTC"));
 
     @Mock
     private TaskRepository taskRepository;
@@ -37,7 +46,7 @@ public class DefaultTaskServiceTest {
     @BeforeMethod
     public void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        taskService = new DefaultTaskService(taskRepository);
+        taskService = new DefaultTaskService(taskRepository, FIXED_CLOCK);
     }
 
     @AfterMethod
@@ -71,8 +80,85 @@ public class DefaultTaskServiceTest {
         assertEquals(savedTask.getStatus(), TaskStatus.OPEN);
         assertEquals(savedTask.getPriority(), Priority.HIGH);
         assertNotNull(savedTask.getId());
-        assertNotNull(savedTask.getCreatedAt());
+        assertEquals(savedTask.getCreatedAt(), LocalDateTime.of(2026, 6, 20, 10, 0));
         assertEquals(createdTask.getUsername(), "alice");
+    }
+
+    @Test
+    public void getUserTasksWithQueryShouldSearchTitleAndDescriptionCaseInsensitively() {
+        TodoTask titleMatch = task("1", "Quarterly Refile", "archive", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.MEDIUM);
+        TodoTask descriptionMatch = task("2", "Receipts", "REFILE the receipts", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.LOW);
+        TodoTask miss = task("3", "Groceries", "milk", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.HIGH);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(titleMatch, descriptionMatch, miss));
+
+        List<TodoTask> tasks = taskService.getUserTasks("  ALICE ", TaskDashboardQuery.from("refile", null, null, null, null));
+
+        assertEquals(tasks, List.of(titleMatch, descriptionMatch));
+        verify(taskRepository).findByUsername("alice");
+    }
+
+    @Test
+    public void getUserTasksWithQueryShouldFilterByStatusAndPriority() {
+        TodoTask highOpen = task("1", "High open", "", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.HIGH);
+        TodoTask lowOpen = task("2", "Low open", "", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.LOW);
+        TodoTask highCompleted = task("3", "High completed", "", TODAY, TODAY.plusDays(1), TaskStatus.COMPLETED, Priority.HIGH);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(highOpen, lowOpen, highCompleted));
+
+        TaskDashboardQuery query = TaskDashboardQuery.from("", "OPEN", "HIGH", "ALL", "NONE");
+
+        assertEquals(taskService.getUserTasks("alice", query), List.of(highOpen));
+    }
+
+    @Test
+    public void getUserTasksWithQueryShouldFilterDateBuckets() {
+        TodoTask todayByTaskDate = task("1", "Today task", "", TODAY, TODAY.plusDays(3), TaskStatus.OPEN, Priority.MEDIUM);
+        TodoTask todayByFinishDate = task("2", "Today finish", "", TODAY.minusDays(2), TODAY, TaskStatus.OPEN, Priority.MEDIUM);
+        TodoTask upcomingByTaskDate = task("3", "Upcoming task", "", TODAY.plusDays(1), TODAY.plusDays(2), TaskStatus.OPEN, Priority.MEDIUM);
+        TodoTask overdueOpen = task("4", "Overdue", "", TODAY.minusDays(5), TODAY.minusDays(1), TaskStatus.OPEN, Priority.HIGH);
+        TodoTask pastCompleted = task("5", "Past done", "", TODAY.minusDays(5), TODAY.minusDays(1), TaskStatus.COMPLETED, Priority.HIGH);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(todayByTaskDate, todayByFinishDate, upcomingByTaskDate, overdueOpen, pastCompleted));
+
+        assertEquals(taskService.getUserTasks("alice", TaskDashboardQuery.from(null, null, null, "TODAY", null)),
+            List.of(todayByTaskDate, todayByFinishDate));
+        assertEquals(taskService.getUserTasks("alice", TaskDashboardQuery.from(null, null, null, "UPCOMING", null)),
+            List.of(todayByTaskDate, upcomingByTaskDate));
+        assertEquals(taskService.getUserTasks("alice", TaskDashboardQuery.from(null, null, null, "OVERDUE", null)),
+            List.of(overdueOpen));
+        assertFalse(taskService.isOverdue(pastCompleted));
+        assertTrue(taskService.isOverdue(overdueOpen));
+    }
+
+    @Test
+    public void getUserTasksWithQueryShouldSortByPlannedFinishDateAscending() {
+        TodoTask later = task("1", "Later", "", TODAY, TODAY.plusDays(5), TaskStatus.OPEN, Priority.MEDIUM);
+        TodoTask earlier = task("2", "Earlier", "", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.MEDIUM);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(later, earlier));
+
+        assertEquals(taskService.getUserTasks("alice", TaskDashboardQuery.from(null, null, null, null, "PLANNED_FINISH_ASC")),
+            List.of(earlier, later));
+    }
+
+    @Test
+    public void getUserTasksWithQueryShouldSortByPriorityHighToLow() {
+        TodoTask low = task("1", "Low", "", TODAY, TODAY.plusDays(1), TaskStatus.OPEN, Priority.LOW);
+        TodoTask high = task("2", "High", "", TODAY, TODAY.plusDays(2), TaskStatus.OPEN, Priority.HIGH);
+        TodoTask medium = task("3", "Medium", "", TODAY, TODAY.plusDays(3), TaskStatus.OPEN, Priority.MEDIUM);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(low, high, medium));
+
+        assertEquals(taskService.getUserTasks("alice", TaskDashboardQuery.from(null, null, null, null, "PRIORITY")),
+            List.of(high, medium, low));
+    }
+
+    @Test
+    public void getUserTaskDisplaysShouldAddOverdueFlag() {
+        TodoTask overdue = task("1", "Overdue", "", TODAY.minusDays(3), TODAY.minusDays(1), TaskStatus.OPEN, Priority.HIGH);
+        TodoTask completedPast = task("2", "Done", "", TODAY.minusDays(3), TODAY.minusDays(1), TaskStatus.COMPLETED, Priority.HIGH);
+        when(taskRepository.findByUsername("alice")).thenReturn(List.of(overdue, completedPast));
+
+        List<TaskDisplay> displays = taskService.getUserTaskDisplays("alice", TaskDashboardQuery.defaults());
+
+        assertTrue(displays.get(0).overdue());
+        assertFalse(displays.get(1).overdue());
     }
 
     @Test
@@ -93,17 +179,7 @@ public class DefaultTaskServiceTest {
 
     @Test
     public void markCompletedShouldUpdateTaskStatus() {
-        TodoTask existingTask = new TodoTask(
-            "task-1",
-            "alice",
-            "Task",
-            "Desc",
-            LocalDate.of(2026, 6, 20),
-            LocalDate.of(2026, 6, 21),
-            TaskStatus.OPEN,
-            Priority.MEDIUM,
-            LocalDateTime.now()
-        );
+        TodoTask existingTask = task("task-1", "Task", "Desc", LocalDate.of(2026, 6, 20), LocalDate.of(2026, 6, 21), TaskStatus.OPEN, Priority.MEDIUM);
 
         when(taskRepository.findById("alice", "task-1")).thenReturn(Optional.of(existingTask));
 
@@ -138,17 +214,7 @@ public class DefaultTaskServiceTest {
 
     @Test
     public void updateTaskShouldModifyPriorityAndPersist() {
-        TodoTask existingTask = new TodoTask(
-            "task-1",
-            "alice",
-            "Old",
-            "Old desc",
-            LocalDate.of(2026, 6, 20),
-            LocalDate.of(2026, 6, 21),
-            TaskStatus.OPEN,
-            Priority.MEDIUM,
-            LocalDateTime.now()
-        );
+        TodoTask existingTask = task("task-1", "Old", "Old desc", LocalDate.of(2026, 6, 20), LocalDate.of(2026, 6, 21), TaskStatus.OPEN, Priority.MEDIUM);
         when(taskRepository.findById("alice", "task-1")).thenReturn(Optional.of(existingTask));
 
         TaskForm taskForm = taskForm(
@@ -187,17 +253,7 @@ public class DefaultTaskServiceTest {
 
     @Test
     public void updateTaskShouldRethrowStorageFailure() {
-        TodoTask existingTask = new TodoTask(
-            "task-1",
-            "alice",
-            "Old",
-            "Old desc",
-            LocalDate.of(2026, 6, 20),
-            LocalDate.of(2026, 6, 21),
-            TaskStatus.OPEN,
-            Priority.MEDIUM,
-            LocalDateTime.now()
-        );
+        TodoTask existingTask = task("task-1", "Old", "Old desc", LocalDate.of(2026, 6, 20), LocalDate.of(2026, 6, 21), TaskStatus.OPEN, Priority.MEDIUM);
         when(taskRepository.findById("alice", "task-1")).thenReturn(Optional.of(existingTask));
         doThrow(new IllegalStateException("write failed"))
             .when(taskRepository).update(any(TodoTask.class));
@@ -214,6 +270,27 @@ public class DefaultTaskServiceTest {
             () -> taskService.updateTask("alice", "task-1", taskForm));
 
         assertTrue(exception.getMessage().contains("write failed"));
+    }
+
+    private TodoTask task(String id,
+                          String title,
+                          String description,
+                          LocalDate taskDate,
+                          LocalDate plannedFinishDate,
+                          TaskStatus status,
+                          Priority priority) {
+        return task(id, "alice", title, description, taskDate, plannedFinishDate, status, priority);
+    }
+
+    private TodoTask task(String id,
+                          String username,
+                          String title,
+                          String description,
+                          LocalDate taskDate,
+                          LocalDate plannedFinishDate,
+                          TaskStatus status,
+                          Priority priority) {
+        return new TodoTask(id, username, title, description, taskDate, plannedFinishDate, status, priority, LocalDateTime.now(FIXED_CLOCK));
     }
 
     private TaskForm taskForm(String title,
