@@ -101,6 +101,16 @@ mvn clean package
 ```bash
 mvn spring-boot:run
 ```
+3. Start the application through Jar file
+	```bash
+	java -jar <jar_file_name>
+	```
+Or run the packaged JAR generated under `target/artifact`.
+Other build outputs such as classes and test-classes remain directly under `target`:
+
+```powershell
+java -jar .\target\artifact\todo-app-1.0.0.jar
+```
 
 3. Open:
 
